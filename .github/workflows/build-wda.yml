@@ -26,6 +26,18 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             PROVISIONING_PROFILE_SPECIFIER=""
 
+      - name: Ad-hoc sign every binary (so sideloading tools can re-sign cleanly)
+        working-directory: wda
+        run: |
+          APP_PATH="build/Build/Products/Debug-iphoneos/WebDriverAgentRunner-Runner.app"
+          find "$APP_PATH" -type f \( -perm -111 -o -name "*.dylib" \) -exec file {} \; \
+            | grep -i "mach-o" | cut -d: -f1 | while read -r bin; do
+              echo "Signing: $bin"
+              codesign --force --sign - --timestamp=none "$bin"
+            done
+          codesign --force --sign - --timestamp=none "$APP_PATH"
+          codesign -dv "$APP_PATH/PlugIns/WebDriverAgentRunner.xctest/WebDriverAgentRunner" 2>&1 || true
+
       - name: Package as .ipa
         working-directory: wda
         run: |
